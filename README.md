@@ -27,3 +27,6 @@ The secret is stored only on your phone, inside Bland's private storage.
 
 ## Build
 `./gradlew assembleDebug` needs the Android SDK (API 35) and JDK 17.
+
+## Browser preview
+`preview/index.html` is a clickable mock-up of the launcher. Open it in any browser to try layout and behavior changes before building the APK.

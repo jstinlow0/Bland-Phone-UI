@@ -1,0 +1,722 @@
+<title>Bland Launcher</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;700&family=Roboto+Mono:wght@300;400&family=Roboto+Condensed:wght@300;400&family=Noto+Serif:wght@400&display=swap">
+<style>
+/* Layout: one phone-shaped screen centered on a black field; full-bleed at phone width. Deliberately single-theme: black and white only. */
+:root {
+  --black: #000; --white: #fff; --gray: #8a8a8a; --dim: #4a4a4a; --sheet: #1c1c1c; --edge: #262626;
+  --font: "Roboto", "Helvetica Neue", Arial, sans-serif;
+  --s: 1;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--black); color: var(--white); font-family: "Roboto", Arial, sans-serif; font-weight: 300;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px; box-sizing: border-box; user-select: none; -webkit-user-select: none;
+}
+.phone {
+  position: relative; width: 100%; max-width: 380px; height: min(780px, calc(100% - 40px)); min-height: 560px;
+  border: 1px solid var(--edge); border-radius: 36px; overflow: hidden; background: var(--black);
+  touch-action: none; font-family: var(--font);
+}
+.status { position: absolute; top: 0; left: 0; right: 0; height: 28px; display: flex; justify-content: space-between;
+  padding: 8px 26px 0; font-size: 12px; color: var(--gray); font-weight: 400; z-index: 5; pointer-events: none; font-variant-numeric: tabular-nums; font-family: "Roboto", sans-serif; }
+.screen { position: absolute; inset: 0; padding: 64px 32px 30px; display: flex; flex-direction: column; background: var(--black); }
+.screen[hidden] { display: none !important; }
+button, input, textarea { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
+button { cursor: pointer; text-align: inherit; }
+button:focus-visible, input:focus-visible { outline: 1px solid var(--gray); outline-offset: 4px; }
+.muted { color: var(--gray); } .faint { color: var(--dim); }
+
+/* home */
+#home { gap: 0; }
+.clockbox { display: flex; flex-direction: column; }
+.clock { line-height: 1; font-variant-numeric: tabular-nums; }
+.clock.thin { font-family: "Roboto", sans-serif; font-weight: 100; letter-spacing: -1px; }
+.clock.bold { font-family: "Roboto", sans-serif; font-weight: 700; letter-spacing: -2px; }
+.clock.serif { font-family: "Noto Serif", Georgia, serif; font-weight: 400; }
+.clock.mono { font-family: "Roboto Mono", monospace; font-weight: 300; }
+.clock.words { font-weight: 300; line-height: 1.05; text-wrap: balance; }
+.date { font-size: calc(18px * var(--s)); color: var(--gray); margin-top: 6px; }
+.usage { font-size: calc(14px * var(--s)); color: var(--dim); margin-top: 6px; }
+.spacer { flex: 1; }
+.favs { display: flex; flex-direction: column; }
+.fav { font-size: calc(28px * var(--s)); padding: 8px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.empty { font-size: 16px; color: var(--dim); line-height: 1.5; }
+.quote { font-size: calc(15px * var(--s)); color: var(--gray); line-height: 1.45; padding-top: 16px; cursor: pointer; display: flex; flex-direction: column; }
+.quote .by { color: var(--dim); font-size: calc(13px * var(--s)); margin-top: 4px; }
+.bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; }
+.bottom button { color: var(--gray); font-size: calc(15px * var(--s)); padding: 12px 0; }
+.al-left { align-items: flex-start; text-align: left; } .al-center { align-items: center; text-align: center; } .al-right { align-items: flex-end; text-align: right; }
+
+/* drawer + wheel */
+#drawer { padding-top: 56px; padding-bottom: 30px; }
+.search { width: 100%; border-bottom: 1px solid var(--dim); color: var(--white); font-size: calc(22px * var(--s)); padding: 12px 0; outline: none; caret-color: var(--white); box-sizing: border-box; }
+.search::placeholder { color: var(--dim); }
+.wheel { position: relative; flex: 1; overflow: hidden; perspective: 700px; cursor: grab; }
+.wheel:active { cursor: grabbing; }
+.wheel::before, .wheel::after { content: ""; position: absolute; left: 0; right: 0; height: 1px; background: var(--edge); top: 50%; pointer-events: none; }
+.wheel::before { transform: translateY(calc(-28px * var(--s))); } .wheel::after { transform: translateY(calc(28px * var(--s))); }
+.wi { position: absolute; left: 0; right: 0; top: 50%; height: calc(56px * var(--s)); line-height: calc(56px * var(--s));
+  font-size: calc(24px * var(--s)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; will-change: transform, opacity; }
+.wi.paused { color: var(--gray); } .wi.hidden { color: var(--dim); } .wi.locked { color: var(--dim); text-decoration: line-through; }
+.nomatch { position: absolute; top: 50%; transform: translateY(-50%); color: var(--dim); font-size: 18px; }
+.wheel-hint { color: var(--dim); font-size: 13px; text-align: center; padding-top: 8px; }
+
+/* gate / locked */
+.center { align-items: center; justify-content: center; text-align: center; }
+.g-label { font-size: calc(34px * var(--s)); } .g-count { font-size: calc(16px * var(--s)); color: var(--gray); margin-top: 8px; }
+.g-timer { font-size: 72px; font-weight: 100; margin-top: 48px; font-variant-numeric: tabular-nums; min-height: 86px; font-family: "Roboto", sans-serif; }
+.g-ask { color: var(--gray); font-size: calc(16px * var(--s)); margin-top: 16px; line-height: 1.5; }
+.g-row { display: flex; margin-top: 48px; gap: 8px; }
+.g-row button { font-size: calc(20px * var(--s)); padding: 20px; }
+#g-open { color: var(--dim); } #g-open.ready { color: var(--white); }
+.lock-ring { width: 120px; height: 120px; border-radius: 50%; border: 1px solid var(--dim); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--gray); margin: 40px 0 8px; letter-spacing: 1px; text-transform: uppercase; }
+
+/* calendar */
+#calendar { padding-top: 56px; overflow: hidden; }
+.cal-head { display: flex; justify-content: space-between; align-items: baseline; }
+.cal-month { font-size: calc(30px * var(--s)); }
+.cal-year { color: var(--gray); font-size: calc(16px * var(--s)); }
+.cal-stage { position: relative; margin-top: 20px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 4px; text-align: center; font-variant-numeric: tabular-nums; transition: transform .22s ease, opacity .22s ease; }
+.cal-grid .dow { color: var(--dim); font-size: 12px; padding-bottom: 8px; letter-spacing: 1px; }
+.day { position: relative; height: 40px; display: flex; align-items: center; justify-content: center; font-size: calc(16px * var(--s)); }
+.day.other { color: var(--edge); }
+.day span { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.day.today span { background: var(--white); color: var(--black); font-weight: 400; }
+.day.sel:not(.today) span { box-shadow: inset 0 0 0 1px var(--white); }
+.day.has::after { content: ""; position: absolute; bottom: 1px; width: 3px; height: 3px; border-radius: 50%; background: var(--gray); }
+.cal-events { margin-top: 22px; border-top: 1px solid var(--edge); padding-top: 14px; flex: 1; overflow-y: auto; }
+.cal-events h4 { margin: 0 0 10px; font-weight: 400; font-size: 13px; color: var(--gray); letter-spacing: 1px; text-transform: uppercase; }
+.ev { display: flex; gap: 14px; padding: 7px 0; font-size: calc(17px * var(--s)); }
+.ev time { color: var(--gray); min-width: 64px; font-variant-numeric: tabular-nums; }
+.cal-foot { color: var(--dim); font-size: 13px; text-align: center; padding-top: 8px; }
+
+/* notifications */
+#notifs { padding-top: 56px; }
+.n-head { font-size: calc(30px * var(--s)); }
+.n-sub { color: var(--gray); font-size: 14px; margin-top: 4px; }
+.n-list { flex: 1; overflow-y: auto; margin-top: 16px; scrollbar-width: none; }
+.n-list::-webkit-scrollbar { display: none; }
+.n-sec { color: var(--dim); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; margin: 18px 0 6px; }
+.n { display: block; width: 100%; padding: 10px 0; border-bottom: 1px solid #141414; text-align: left; }
+.n .n-app { font-size: 12px; color: var(--gray); display: flex; justify-content: space-between; letter-spacing: .5px; }
+.n .n-title { font-size: calc(17px * var(--s)); margin-top: 3px; }
+.n .n-text { font-size: calc(15px * var(--s)); color: var(--gray); margin-top: 2px; }
+.n.held .n-title { color: var(--gray); } .n.held .n-text { color: var(--dim); }
+.n-actions { display: flex; justify-content: space-between; padding-top: 10px; }
+.n-actions button { color: var(--gray); font-size: 15px; padding: 8px 0; }
+
+/* settings */
+#settings { padding-top: 56px; }
+.s-scroll { flex: 1; overflow-y: auto; scrollbar-width: none; }
+.s-scroll::-webkit-scrollbar { display: none; }
+.s-back { color: var(--gray); font-size: 15px; padding: 4px 0 12px; }
+.s-title { font-size: calc(32px * var(--s)); padding-bottom: 18px; }
+.s-item { display: flex; justify-content: space-between; gap: 12px; width: 100%; font-size: calc(19px * var(--s)); padding: 10px 0; text-align: left; }
+.s-item .v { color: var(--gray); white-space: nowrap; }
+.s-label { color: var(--dim); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; margin: 18px 0 4px; }
+.s-note { font-size: 14px; color: var(--dim); line-height: 1.5; margin-top: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; }
+.chip { border: 1px solid var(--dim); border-radius: 18px; padding: 7px 14px; font-size: 14px; color: var(--gray); }
+.chip.on { border-color: var(--white); color: var(--white); }
+.field { display: block; width: 100%; border-bottom: 1px solid var(--dim); padding: 10px 0; font-size: 16px; color: var(--white); outline: none; margin-bottom: 14px; box-sizing: border-box; }
+.field::placeholder { color: var(--dim); }
+
+/* note */
+#note { padding-top: 56px; }
+.note-to { color: var(--gray); font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+.note-text { flex: 1; resize: none; outline: none; margin-top: 14px; font-size: calc(22px * var(--s)); line-height: 1.4; color: var(--white); caret-color: var(--white); }
+.note-text::placeholder { color: var(--dim); }
+.note-row { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; }
+.note-row button { font-size: calc(18px * var(--s)); padding: 12px 0; }
+.note-row .save { border: 1px solid var(--white); border-radius: 22px; padding: 10px 20px; }
+
+/* opened app stand-in */
+#opened { gap: 10px; }
+#opened .o-name { font-size: 28px; } #opened .o-sub { color: var(--gray); font-size: 14px; line-height: 1.5; }
+
+/* dialog */
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.65); display: flex; align-items: center; justify-content: center; z-index: 10; padding: 24px; }
+.dialog { background: var(--sheet); border-radius: 6px; width: 100%; padding: 20px 0 8px; max-height: 80%; overflow-y: auto; font-family: "Roboto", sans-serif; }
+.dialog h3 { margin: 0 24px 8px; font-weight: 400; font-size: 20px; }
+.dialog p { white-space: pre-line; margin: 0 24px 12px; color: var(--gray); font-size: 15px; line-height: 1.5; }
+.dialog .opt { display: block; width: 100%; padding: 12px 24px; font-size: 16px; font-weight: 400; text-align: left; }
+.dialog .opt:hover { background: #262626; }
+.dialog .opt.cur::after { content: "  ·"; color: var(--gray); }
+.dialog .body { padding: 0 24px; }
+.dialog .btns { display: flex; justify-content: flex-end; gap: 16px; padding: 4px 24px 10px; }
+.dialog .btns button { padding: 10px 0; font-weight: 400; text-transform: uppercase; font-size: 14px; letter-spacing: .5px; }
+
+.toast { position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%); background: #2a2a2a; color: var(--white);
+  padding: 10px 16px; border-radius: 20px; font-size: 14px; z-index: 20; white-space: nowrap; max-width: 90%; overflow: hidden; text-overflow: ellipsis; font-family: "Roboto", sans-serif; }
+.navbar { position: absolute; bottom: 0; left: 0; right: 0; height: 22px; display: flex; justify-content: center; align-items: center; z-index: 6; }
+.navbar button { width: 110px; height: 4px; border-radius: 2px; background: var(--dim); }
+.caption { color: var(--dim); font-size: 13px; text-align: center; max-width: 380px; line-height: 1.5; }
+@media (max-width: 440px) { .phone { border: 0; border-radius: 0; max-width: none; height: 100%; min-height: 0; } .caption { display: none; } body { padding-block: 0; } }
+@media (prefers-reduced-motion: reduce) { .cal-grid { transition: none; } }
+</style>
+
+<div class="phone" id="phone">
+  <div class="status"><span id="sb-time">9:41</span><span id="sb-right">82%</span></div>
+
+  <section class="screen" id="home">
+    <div class="clockbox" id="clockbox">
+      <button class="clock" id="clock" aria-label="clock, long-press for settings">9:41</button>
+      <button class="date" id="date">Monday, November 16</button>
+      <div class="usage" id="usage"></div>
+    </div>
+    <div class="spacer" id="sp1"></div>
+    <div class="favs" id="favs"></div>
+    <div class="spacer" id="sp2"></div>
+    <div class="quote" id="quote"></div>
+    <div class="bottom" id="bottom"><button id="hint">apps</button><button id="noteBtn">+ note</button></div>
+  </section>
+
+  <section class="screen" id="drawer" hidden>
+    <input class="search" id="search" placeholder="search" autocomplete="off" spellcheck="false">
+    <div class="wheel" id="wheel"></div>
+    <div class="wheel-hint">spin to scroll · tap to open · hold for options</div>
+  </section>
+
+  <section class="screen center" id="gate" hidden>
+    <div class="g-label" id="g-label"></div>
+    <div class="g-count" id="g-count"></div>
+    <div class="g-timer" id="g-timer"></div>
+    <div class="g-ask">take a breath.<br>do you need this right now?</div>
+    <div class="g-row"><button id="g-cancel">not now</button><button id="g-open">open</button></div>
+  </section>
+
+  <section class="screen center" id="locked" hidden>
+    <div class="g-label" id="l-label"></div>
+    <div class="lock-ring">locked</div>
+    <div class="g-count" id="l-count"></div>
+    <div class="g-ask">it unlocks at midnight.<br>go do something else.</div>
+    <div class="g-row"><button id="l-ok">ok</button></div>
+  </section>
+
+  <section class="screen" id="calendar" hidden>
+    <div class="cal-head"><div class="cal-month" id="cal-month"></div><div class="cal-year" id="cal-year"></div></div>
+    <div class="cal-stage"><div class="cal-grid" id="cal-grid"></div></div>
+    <div class="cal-events" id="cal-events"></div>
+    <div class="cal-foot">swipe left or right for other months · swipe up for home</div>
+  </section>
+
+  <section class="screen" id="notifs" hidden>
+    <div class="n-head">notifications</div>
+    <div class="n-sub" id="n-sub"></div>
+    <div class="n-list" id="n-list"></div>
+    <div class="n-actions"><button id="n-clear">clear all</button><button id="n-manage">choose what reaches you</button></div>
+  </section>
+
+  <section class="screen" id="settings" hidden>
+    <div class="s-scroll" id="s-scroll"></div>
+  </section>
+
+  <section class="screen" id="note" hidden>
+    <div class="note-to" id="note-to">capture → notion · inbox</div>
+    <textarea class="note-text" id="note-text" placeholder="what's on your mind?"></textarea>
+    <div class="note-row"><button id="note-cancel" class="muted">cancel</button><button id="note-save" class="save">save to inbox</button></div>
+  </section>
+
+  <section class="screen center" id="opened" hidden>
+    <div class="o-name" id="o-name"></div>
+    <div class="o-sub">pretend you're in the app now.<br>tap the bar below to go home.</div>
+  </section>
+
+  <div class="navbar"><button id="homebar" aria-label="home"></button></div>
+  <div id="overlay"></div>
+</div>
+<div class="caption">Swipe up for apps · down for notifications · left or right for the calendar. Long-press an app for options, long-press the clock for settings. The bar at the bottom is the home button.</div>
+
+<script>
+const QUOTES = [["How we spend our days is, of course, how we spend our lives.", "Annie Dillard"], ["It is not that we have a short time to live, but that we waste a lot of it.", "Seneca"], ["My experience is what I agree to attend to.", "William James"], ["Almost everything will work again if you unplug it for a few minutes, including you.", "Anne Lamott"], ["Your mind is for having ideas, not holding them.", "David Allen"], ["You do not rise to the level of your goals. You fall to the level of your systems.", "James Clear"], ["Clarity about what matters provides clarity about what does not.", "Cal Newport"], ["If you don't prioritize your life, someone else will.", "Greg McKeown"], ["We suffer more often in imagination than in reality.", "Seneca"], ["The impediment to action advances action. What stands in the way becomes the way.", "Marcus Aurelius"], ["Waste no more time arguing about what a good man should be. Be one.", "Marcus Aurelius"], ["First say to yourself what you would be; and then do what you have to do.", "Epictetus"], ["No man is free who is not master of himself.", "Epictetus"], ["We are what we repeatedly do. Excellence, then, is not an act, but a habit.", "Will Durant"], ["Every action you take is a vote for the type of person you wish to become.", "James Clear"], ["Lost time is never found again.", "Benjamin Franklin"], ["Well done is better than well said.", "Benjamin Franklin"], ["You can't use up creativity. The more you use, the more you have.", "Maya Angelou"], ["Nothing is particularly hard if you divide it into small jobs.", "Henry Ford"], ["The best way out is always through.", "Robert Frost"], ["Not all those who wander are lost.", "J.R.R. Tolkien"], ["Knowing is not enough; we must apply.", "Johann Wolfgang von Goethe"], ["Discipline equals freedom.", "Jocko Willink"], ["Be regular and orderly in your life, so that you may be violent and original in your work.", "Gustave Flaubert"], ["A year from now you may wish you had started today.", "Karen Lamb"], ["Life is long if you know how to use it.", "Seneca"], ["While we are postponing, life speeds by.", "Seneca"], ["Amateurs sit and wait for inspiration, the rest of us just get up and go to work.", "Stephen King"], ["You miss 100% of the shots you don't take.", "Wayne Gretzky"], ["Fall seven times, stand up eight.", "Japanese proverb"], ["Do the hard jobs first. The easy jobs will take care of themselves.", "Dale Carnegie"], ["Focus is a matter of deciding what things you're not going to do.", "John Carmack"], ["Focus means saying no to the hundred other good ideas.", "Steve Jobs"], ["Your time is limited, so don't waste it living someone else's life.", "Steve Jobs"], ["The first principle is that you must not fool yourself, and you are the easiest person to fool.", "Richard Feynman"], ["Concentrate all your thoughts upon the work at hand. The sun's rays do not burn until brought to a focus.", "Alexander Graham Bell"], ["What information consumes is rather obvious: it consumes the attention of its recipients.", "Herbert Simon"], ["The cost of a thing is the amount of life which is required to be exchanged for it.", "Henry David Thoreau"], ["Rest is not idleness.", "John Lubbock"], ["Done is better than perfect.", "Sheryl Sandberg"], ["The obstacle is the way.", "Ryan Holiday"], ["The best time to plant a tree was twenty years ago. The second best time is now.", "Proverb"], ["Suffer now and live the rest of your life as a champion.", "Muhammad Ali"], ["Nobody ever figures out what life is all about, and it doesn't matter. Explore the world.", "Richard Feynman"], ["The happiness of your life depends upon the quality of your thoughts.", "Marcus Aurelius"]];
+const APPS = ["Calculator","Calendar","Camera","Chrome","Clock","Contacts","Drive","Files","Gmail","Google","Instagram","Keep Notes","Maps","Messages","Netflix","Notion","Phone","Photos","Play Store","Reddit","Settings","Snapchat","Spotify","TikTok","Uber","WhatsApp","X","YouTube"];
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("bland2:" + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("bland2:" + k, JSON.stringify(v)); } catch {} }
+};
+const DEFAULTS = {
+  favs: ["Phone", "Messages", "Camera", "Maps", "Spotify"],
+  paused: ["Instagram", "TikTok", "YouTube", "Reddit"],
+  hidden: [], delay: 10, max: 6, showHidden: false,
+  limit: 3, pendingLimit: null,
+  opens: { Messages: 3, Instagram: 2, Phone: 1, TikTok: 3 },
+  font: "sans", size: 1,
+  clock: { pos: "top", align: "left", style: "thin", size: "large" }, favAlign: "left",
+  modes: { Messages: "allow", Phone: "allow", WhatsApp: "allow", Calendar: "allow", Clock: "allow", Gmail: "allow",
+           Instagram: "quiet", YouTube: "quiet", Snapchat: "quiet", Spotify: "quiet", TikTok: "block", Reddit: "block", X: "block" },
+  showQuote: true, cleared: false, notion: { token: "", db: "", name: "Inbox" }, notes: [],
+};
+const S = {}; for (const k in DEFAULTS) S[k] = store.get(k, structuredClone(DEFAULTS[k]));
+const save = () => { for (const k in S) store.set(k, S[k]); };
+const total = () => Object.values(S.opens).reduce((a, b) => a + b, 0);
+const mod = (a, n) => ((a % n) + n) % n;
+let current = "home", gateTimer = null;
+
+/* ---------- look: font + size ---------- */
+const FONTS = { sans: ['"Roboto", Arial, sans-serif', "sans"], serif: ['"Noto Serif", Georgia, serif', "serif"], mono: ['"Roboto Mono", monospace', "mono"], condensed: ['"Roboto Condensed", "Arial Narrow", sans-serif', "condensed"] };
+const SIZES = [[0.85, "small"], [1, "normal"], [1.15, "large"], [1.3, "huge"]];
+function applyLook() {
+  document.documentElement.style.setProperty("--font", FONTS[S.font][0]);
+  document.documentElement.style.setProperty("--s", S.size);
+}
+
+/* ---------- navigation ---------- */
+function show(id) {
+  ["home", "drawer", "gate", "locked", "calendar", "notifs", "settings", "note", "opened"].forEach(s => $(s).hidden = s !== id);
+  current = id; clearInterval(gateTimer); closeDialog();
+  if (id === "home") renderHome();
+  if (id === "drawer") { $("search").value = ""; wheelSet(filtered()); setTimeout(() => $("search").focus(), 0); }
+  if (id === "calendar") { calMonth = 0; calSel = new Date(); renderCal(0); }
+  if (id === "notifs") renderNotifs();
+  if (id === "note") { $("note-text").value = ""; $("note-to").textContent = `capture → notion · ${S.notion.name.toLowerCase()}`; setTimeout(() => $("note-text").focus(), 0); }
+  updateStatus();
+}
+
+/* ---------- clock ---------- */
+const ONES = ["twelve","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
+const TENS = ["", "", "twenty", "thirty", "forty", "fifty"];
+function words(d) {
+  const h = ONES[d.getHours() % 12], m = d.getMinutes();
+  if (m === 0) return `${h} o'clock`;
+  if (m < 10) return `${h} oh ${ONES[m]}`;
+  if (m < 20) return `${h} ${ONES[m]}`;
+  return `${h} ${TENS[Math.floor(m / 10)]}${m % 10 ? "-" + ONES[m % 10] : ""}`;
+}
+const CLOCK_SIZES = { small: 48, medium: 64, large: 80, huge: 104 };
+function tick() {
+  const d = new Date();
+  const t = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }).replace(/\s?[AP]M/i, "");
+  const c = $("clock");
+  c.className = "clock " + S.clock.style;
+  c.textContent = S.clock.style === "words" ? words(d) : t;
+  const px = CLOCK_SIZES[S.clock.size] * (S.clock.style === "words" ? 0.5 : 1);
+  c.style.fontSize = px + "px";
+  $("sb-time").textContent = t;
+  $("date").textContent = d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+}
+setInterval(tick, 10000);
+
+/* ---------- long-press helper ---------- */
+function press(el, onTap, onLong) {
+  let timer = null, long = false, sx = 0, sy = 0;
+  el.addEventListener("pointerdown", e => { long = false; sx = e.clientX; sy = e.clientY;
+    timer = setTimeout(() => { long = true; onLong && onLong(); }, 500); });
+  el.addEventListener("pointermove", e => { if (Math.hypot(e.clientX - sx, e.clientY - sy) > 10) clearTimeout(timer); });
+  el.addEventListener("pointerup", () => clearTimeout(timer));
+  el.addEventListener("pointerleave", () => clearTimeout(timer));
+  el.addEventListener("click", e => { if (long) { e.preventDefault(); return; } onTap && onTap(); });
+  el.addEventListener("contextmenu", e => e.preventDefault());
+}
+
+/* ---------- home ---------- */
+const ORDER = { top: ["clockbox", "sp1", "favs", "sp2"], middle: ["sp1", "clockbox", "favs", "sp2"], bottom: ["sp1", "favs", "sp2", "clockbox"] };
+function renderHome() {
+  tick();
+  ORDER[S.clock.pos].forEach((id, i) => $(id).style.order = i);
+  $("bottom").style.order = 9;
+  const q = $("quote"); q.style.order = 8; q.hidden = !S.showQuote;
+  const [qt, qa] = QUOTES[Math.floor((Date.now() - new Date().getTimezoneOffset() * 6e4) / 864e5) % QUOTES.length];
+  q.className = "quote al-" + S.favAlign;
+  q.innerHTML = '<span></span><span class="by"></span>';
+  q.firstChild.textContent = qt; q.lastChild.textContent = "— " + qa.toLowerCase();
+  q.onclick = () => dialog("today's quote", null, `${qt}\n\n— ${qa}`, [["close"], ["save to inbox", () => {
+    if (!S.notion.token) return setTimeout(() => notionSetup(() => show("home")), 0);
+    S.notes.unshift({ text: `"${qt}" — ${qa}`, at: new Date().toISOString() }); save(); toast(`saved to ${S.notion.name.toLowerCase()} (preview, not sent)`); }]]);
+  $("favs").style.marginTop = S.clock.pos === "middle" ? "28px" : "0";
+  $("clockbox").className = "clockbox al-" + S.clock.align;
+  $("clockbox").style.marginTop = S.clock.pos === "bottom" ? "24px" : "0";
+  $("favs").className = "favs al-" + S.favAlign;
+  const n = total();
+  $("usage").textContent = n === 0 ? "no apps opened today" : n === 1 ? "1 app opened today" : `${n} apps opened today`;
+  const box = $("favs"); box.innerHTML = "";
+  const pinned = S.favs.slice(0, S.max);
+  if (!pinned.length) { box.innerHTML = '<div class="empty">swipe up, then long-press an app<br>to pin it here</div>'; return; }
+  pinned.forEach(name => {
+    const b = document.createElement("button"); b.className = "fav"; b.textContent = name.toLowerCase();
+    if (isLocked(name)) b.style.color = "var(--dim)";
+    press(b, () => openApp(name), () => options(name, renderHome)); box.appendChild(b);
+  });
+}
+
+/* ---------- looping wheel ---------- */
+const W = { items: [], offset: 0, loop: true, vel: 0, raf: 0, snapT: 0 };
+const itemH = () => 56 * S.size;
+function filtered() {
+  const q = $("search").value.trim().toLowerCase();
+  let items = APPS.filter(a => (S.showHidden || !S.hidden.includes(a)) && (!q || a.toLowerCase().includes(q)));
+  if (q) items.sort((a, b) => (a.toLowerCase().startsWith(q) ? 0 : 1) - (b.toLowerCase().startsWith(q) ? 0 : 1));
+  return items;
+}
+function wheelSet(items) { W.items = items; W.loop = items.length > 6; W.offset = 0; W.vel = 0; cancelAnimationFrame(W.raf); wheelRender(); }
+function wheelRender() {
+  const el = $("wheel"), n = W.items.length, h = itemH();
+  el.innerHTML = "";
+  if (!n) { el.innerHTML = '<div class="nomatch">no matches</div>'; return; }
+  if (!W.loop) W.offset = Math.max(0, Math.min(n - 1, W.offset));
+  const base = Math.round(W.offset);
+  for (let i = base - 6; i <= base + 6; i++) {
+    if (!W.loop && (i < 0 || i >= n)) continue;
+    const name = W.items[mod(i, n)], d = i - W.offset, ad = Math.abs(d);
+    if (ad > 6) continue;
+    const b = document.createElement("div");
+    b.className = "wi" + (isLocked(name) ? " locked" : S.hidden.includes(name) ? " hidden" : S.paused.includes(name) ? " paused" : "");
+    b.dataset.name = name; b.textContent = name.toLowerCase();
+    b.style.transform = `translateY(${d * h - h / 2}px) rotateX(${-d * 11}deg) scale(${1 - Math.min(ad, 5) * 0.07})`;
+    b.style.transformOrigin = S.favAlign === "center" ? "center" : S.favAlign === "right" ? "right center" : "left center";
+    b.style.textAlign = S.favAlign;
+    b.style.opacity = Math.max(0, 1 - ad * 0.2);
+    el.appendChild(b);
+  }
+}
+function wheelSnap() {
+  cancelAnimationFrame(W.raf);
+  const target = Math.round(W.offset);
+  const step = () => { W.offset += (target - W.offset) * 0.25;
+    if (Math.abs(target - W.offset) < 0.002) { W.offset = target; wheelRender(); return; }
+    wheelRender(); W.raf = requestAnimationFrame(step); };
+  step();
+}
+function wheelMomentum() {
+  cancelAnimationFrame(W.raf);
+  const step = () => { W.offset += W.vel; W.vel *= 0.94;
+    if (!W.loop && (W.offset < 0 || W.offset > W.items.length - 1)) W.vel = 0;
+    wheelRender();
+    if (Math.abs(W.vel) < 0.02) return wheelSnap();
+    W.raf = requestAnimationFrame(step); };
+  step();
+}
+(() => {
+  const el = $("wheel"); let drag = null, lp = null;
+  el.addEventListener("pointerdown", e => {
+    cancelAnimationFrame(W.raf); el.setPointerCapture(e.pointerId);
+    drag = { y: e.clientY, off: W.offset, lastY: e.clientY, lastT: performance.now(), moved: 0, target: e.target.closest(".wi") };
+    W.vel = 0;
+    lp = setTimeout(() => { if (drag && drag.moved < 8 && drag.target) { const name = drag.target.dataset.name; drag = null; options(name, () => wheelSet(filtered())); } }, 500);
+  });
+  el.addEventListener("pointermove", e => {
+    if (!drag) return;
+    const now = performance.now(), dy = e.clientY - drag.lastY;
+    drag.moved = Math.max(drag.moved, Math.abs(e.clientY - drag.y));
+    if (drag.moved > 8) clearTimeout(lp);
+    W.offset = drag.off - (e.clientY - drag.y) / itemH();
+    W.vel = -dy / itemH() * (16 / Math.max(1, now - drag.lastT));
+    drag.lastY = e.clientY; drag.lastT = now; wheelRender();
+  });
+  const end = () => {
+    clearTimeout(lp); if (!drag) return;
+    if (drag.moved < 8) { if (drag.target) openApp(drag.target.dataset.name); }
+    else wheelMomentum();
+    drag = null;
+  };
+  el.addEventListener("pointerup", end); el.addEventListener("pointercancel", end);
+  el.addEventListener("wheel", e => { e.preventDefault(); cancelAnimationFrame(W.raf);
+    W.offset += e.deltaY / itemH() * 0.5; wheelRender(); clearTimeout(W.snapT); W.snapT = setTimeout(wheelSnap, 120); }, { passive: false });
+  el.addEventListener("contextmenu", e => e.preventDefault());
+})();
+$("search").addEventListener("input", () => wheelSet(filtered()));
+$("search").addEventListener("keydown", e => { if (e.key === "Enter" && W.items.length) openApp(W.items[mod(Math.round(W.offset), W.items.length)]); });
+
+/* ---------- limits ---------- */
+function isLocked(name) { return S.paused.includes(name) && S.limit > 0 && (S.opens[name] || 0) >= S.limit; }
+function openApp(name) {
+  if (isLocked(name)) return lockedScreen(name);
+  if (S.paused.includes(name) && S.delay > 0) return gate(name);
+  launch(name);
+}
+function launch(name) { S.opens[name] = (S.opens[name] || 0) + 1; save(); $("o-name").textContent = name.toLowerCase(); show("opened"); }
+function lockedScreen(name) {
+  show("locked");
+  $("l-label").textContent = name.toLowerCase();
+  $("l-count").textContent = `you've used all ${S.limit} opens for today.`;
+  $("l-ok").onclick = () => show("home");
+}
+function gate(name) {
+  show("gate");
+  $("g-label").textContent = name.toLowerCase();
+  const c = S.opens[name] || 0;
+  $("g-count").textContent = S.limit > 0
+    ? `opened ${c} of ${S.limit} times today` + (S.limit - c === 1 ? ". this is the last one." : "")
+    : (c === 0 ? "not opened yet today" : c === 1 ? "opened once today" : `opened ${c} times today`);
+  let left = S.delay; const open = $("g-open"); open.classList.remove("ready");
+  const step = () => { if (left > 0) { $("g-timer").textContent = left--; } else { $("g-timer").textContent = "·"; open.classList.add("ready"); clearInterval(gateTimer); } };
+  step(); gateTimer = setInterval(step, 1000);
+  open.onclick = () => { if (open.classList.contains("ready")) launch(name); };
+  $("g-cancel").onclick = () => show("home");
+}
+
+/* ---------- calendar ---------- */
+let calMonth = 0, calSel = new Date();
+const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+function sampleEvents(d) {
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  const diff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - t) / 864e5);
+  const E = { 0: [["10:00", "client pickup"], ["18:30", "gym"]], 1: [["9:00", "dentist"]], 3: [["12:00", "lunch with alex"]], 5: [["all day", "farmers market"]],
+    8: [["14:00", "team call"]], 12: [["19:00", "dinner at mom's"]], 17: [["8:00", "run club"]], 24: [["all day", "rent due"]], [-2]: [["11:00", "haircut"]], [-6]: [["20:00", "movie night"]] };
+  return E[diff] || [];
+}
+function renderCal(dir) {
+  const now = new Date(), first = new Date(now.getFullYear(), now.getMonth() + calMonth, 1);
+  $("cal-month").textContent = first.toLocaleDateString([], { month: "long" }).toLowerCase();
+  $("cal-year").textContent = first.getFullYear();
+  const g = $("cal-grid");
+  const build = () => {
+    g.innerHTML = ["S","M","T","W","T","F","S"].map(d => `<div class="dow">${d}</div>`).join("");
+    const start = new Date(first); start.setDate(1 - first.getDay());
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      if (i >= 35 && d.getMonth() !== first.getMonth()) break;
+      const b = document.createElement("button");
+      b.className = "day" + (d.getMonth() !== first.getMonth() ? " other" : "") + (sameDay(d, now) ? " today" : "") + (sameDay(d, calSel) ? " sel" : "") + (sampleEvents(d).length ? " has" : "");
+      b.innerHTML = `<span>${d.getDate()}</span>`;
+      b.onclick = () => { calSel = d; renderCal(0); };
+      g.appendChild(b);
+    }
+    const ev = sampleEvents(calSel);
+    $("cal-events").innerHTML = `<h4>${sameDay(calSel, now) ? "today" : calSel.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" }).toLowerCase()}</h4>` +
+      (ev.length ? ev.map(([t, x]) => `<div class="ev"><time>${t}</time><span>${x}</span></div>`).join("") : '<div class="ev faint">nothing planned</div>');
+  };
+  if (!dir) return build();
+  g.style.transition = "none"; g.style.transform = `translateX(${dir * 40}px)`; g.style.opacity = 0;
+  build(); g.offsetWidth;
+  g.style.transition = ""; g.style.transform = "translateX(0)"; g.style.opacity = 1;
+}
+
+/* ---------- notifications ---------- */
+const NOTIFS = [
+  ["Messages", "mom", "dinner sunday? bring the good bread", "2m"],
+  ["Phone", "missed call", "alex · 2 calls", "14m"],
+  ["Gmail", "invoice #2041 paid", "payment received from rivera co.", "40m"],
+  ["Calendar", "client pickup", "10:00 · 2 hours from now", "1h"],
+  ["WhatsApp", "climbing crew", "jo: who's in for saturday?", "1h"],
+  ["Instagram", "sam_r liked your photo", "and 11 others", "3m"],
+  ["YouTube", "new from a channel you follow", "the 20 minute recipe that changed…", "25m"],
+  ["Snapchat", "3 new snaps", "from 2 friends", "50m"],
+  ["Spotify", "new release", "an album you might like", "2h"],
+  ["TikTok", "videos picked for you", "you won't believe #4", "5m"],
+  ["Reddit", "trending: r/all", "this post is blowing up", "30m"],
+  ["X", "12 new posts", "from people you follow", "1h"],
+];
+const mode = app => S.modes[app] || "allow";
+const MODE_LABEL = { allow: "show", quiet: "hold quietly", block: "block" };
+function notifRow(n, held) {
+  const [app, title, text, time] = n, b = document.createElement("button");
+  b.className = "n" + (held ? " held" : "");
+  b.innerHTML = `<div class="n-app"><span></span><span></span></div><div class="n-title"></div><div class="n-text"></div>`;
+  b.querySelector(".n-app span").textContent = app.toLowerCase();
+  b.querySelector(".n-app span:last-child").textContent = time;
+  b.querySelector(".n-title").textContent = title; b.querySelector(".n-text").textContent = text;
+  press(b, () => openApp(app), () => notifMenu(app, renderNotifs));
+  return b;
+}
+function renderNotifs() {
+  const now = S.cleared ? [] : NOTIFS.filter(n => mode(n[0]) === "allow");
+  const held = S.cleared ? [] : NOTIFS.filter(n => mode(n[0]) === "quiet");
+  const blocked = NOTIFS.filter(n => mode(n[0]) === "block").length;
+  $("n-sub").textContent = `${now.length} new · ${held.length} held · ${blocked} blocked today`;
+  const L = $("n-list"); L.innerHTML = "";
+  if (!now.length && !held.length) { L.innerHTML = '<div class="n-sec">all clear</div><div class="faint">nothing needs you right now.</div>'; return; }
+  if (now.length) { L.insertAdjacentHTML("beforeend", '<div class="n-sec">new</div>'); now.forEach(n => L.appendChild(notifRow(n, false))); }
+  if (held.length) { L.insertAdjacentHTML("beforeend", '<div class="n-sec">held quietly · out of your status bar</div>'); held.forEach(n => L.appendChild(notifRow(n, true))); }
+  L.insertAdjacentHTML("beforeend", '<div class="s-note">hold any notification to change what that app can send you.</div>');
+}
+function notifMenu(app, after) {
+  const cur = mode(app);
+  dialog(`${app.toLowerCase()} notifications`, [
+    ["show", () => { S.modes[app] = "allow"; save(); after(); }, cur === "allow"],
+    ["hold quietly (out of the status bar)", () => { S.modes[app] = "quiet"; save(); after(); }, cur === "quiet"],
+    ["block", () => { S.modes[app] = "block"; save(); after(); }, cur === "block"],
+    ["android settings for this app", () => toast("opens android notification settings")],
+  ]);
+}
+function updateStatus() {
+  const n = S.cleared ? 0 : NOTIFS.filter(x => mode(x[0]) === "allow").length;
+  $("sb-right").textContent = (n ? "• " + n + "   " : "") + "82%";
+}
+
+/* ---------- note to notion ---------- */
+$("note-save").onclick = () => {
+  const text = $("note-text").value.trim();
+  if (!text) return toast("write something first");
+  if (!S.notion.token) return notionSetup(() => { show("note"); $("note-text").value = text; });
+  S.notes.unshift({ text, at: new Date().toISOString() }); save();
+  show("home"); toast(`saved to ${S.notion.name.toLowerCase()} (preview, not sent)`);
+};
+$("note-cancel").onclick = () => show("home");
+function notionSetup(after) {
+  dialog("connect notion", null,
+    "in notion: settings → connections → develop integrations → new integration. copy its secret. then open your second brain's inbox database, tap ··· → connections → add your integration, and copy the database link.",
+    [["cancel"], ["connect", () => {
+      const tok = $("f-token").value.trim(), db = $("f-db").value.trim();
+      if (!tok || !db) return toast("both fields are needed");
+      S.notion = { token: tok, db, name: $("f-name").value.trim() || "Inbox" }; save(); toast("notion connected"); after && after();
+    }]],
+    `<input class="field" id="f-token" placeholder="integration secret (ntn_…)" value="${S.notion.token ? "••••••••" : ""}">
+     <input class="field" id="f-db" placeholder="inbox database link" value="">
+     <input class="field" id="f-name" placeholder="name shown on screen (Inbox)" value="${S.notion.name}">`);
+}
+
+/* ---------- dialogs & toasts ---------- */
+function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; $("phone").appendChild(t); setTimeout(() => t.remove(), 2600); }
+function closeDialog() { $("overlay").innerHTML = ""; }
+function dialog(title, opts, message, buttons, bodyHtml) {
+  const scrim = document.createElement("div"); scrim.className = "scrim";
+  scrim.addEventListener("click", e => { if (e.target === scrim) closeDialog(); });
+  const d = document.createElement("div"); d.className = "dialog";
+  const h = document.createElement("h3"); h.textContent = title; d.appendChild(h);
+  if (message) { const p = document.createElement("p"); p.textContent = message; d.appendChild(p); }
+  if (bodyHtml) { const b = document.createElement("div"); b.className = "body"; b.innerHTML = bodyHtml; d.appendChild(b); }
+  (opts || []).forEach(([label, fn, cur]) => { const b = document.createElement("button"); b.className = "opt" + (cur ? " cur" : ""); b.textContent = label;
+    b.onclick = () => { closeDialog(); fn(); }; d.appendChild(b); });
+  if (buttons) { const row = document.createElement("div"); row.className = "btns";
+    buttons.forEach(([label, fn]) => { const b = document.createElement("button"); b.textContent = label; b.onclick = () => { fn ? fn() : null; if (!fn || label !== "connect" || S.notion.token) closeDialog(); }; row.appendChild(b); });
+    d.appendChild(row); }
+  scrim.appendChild(d); closeDialog(); $("overlay").appendChild(scrim);
+}
+const toggle = (arr, v) => { const i = arr.indexOf(v); i >= 0 ? arr.splice(i, 1) : arr.push(v); };
+
+function options(name, after) {
+  const i = S.favs.indexOf(name), o = [];
+  const done = fn => () => { fn(); save(); after(); };
+  if (i >= 0) {
+    o.push(["remove from home", done(() => S.favs.splice(i, 1))]);
+    if (i > 0) o.push(["move up", done(() => [S.favs[i - 1], S.favs[i]] = [S.favs[i], S.favs[i - 1]])]);
+    if (i < S.favs.length - 1) o.push(["move down", done(() => [S.favs[i + 1], S.favs[i]] = [S.favs[i], S.favs[i + 1]])]);
+  } else o.push(["add to home", done(() => { if (S.favs.length >= S.max) toast(`home holds ${S.max} apps. less is more.`); else S.favs.push(name); })]);
+  o.push([S.paused.includes(name) ? "remove pause & limit" : "pause & limit this app", done(() => toggle(S.paused, name))]);
+  o.push([`notifications: ${MODE_LABEL[mode(name)]}`, () => notifMenu(name, after)]);
+  o.push([S.hidden.includes(name) ? "unhide" : "hide from list", done(() => toggle(S.hidden, name))]);
+  o.push(["app info", () => toast("opens android app info")]);
+  o.push(["uninstall", () => toast("opens android uninstall prompt")]);
+  dialog(name.toLowerCase(), o);
+}
+
+/* ---------- settings ---------- */
+const cycle = (list, v) => list[(list.indexOf(v) + 1) % list.length];
+function settings(page = "main") {
+  show("settings");
+  const box = $("s-scroll"); box.innerHTML = ""; box.scrollTop = 0;
+  const back = () => { const b = document.createElement("button"); b.className = "s-back"; b.textContent = "← settings"; b.onclick = () => settings(); box.appendChild(b); };
+  const title = t => { const d = document.createElement("div"); d.className = "s-title"; d.textContent = t; box.appendChild(d); };
+  const label = t => { const d = document.createElement("div"); d.className = "s-label"; d.textContent = t; box.appendChild(d); };
+  const note = t => { const d = document.createElement("div"); d.className = "s-note"; d.textContent = t; box.appendChild(d); };
+  const item = (text, value, fn) => { const b = document.createElement("button"); b.className = "s-item";
+    b.innerHTML = "<span></span><span class='v'></span>"; b.firstChild.textContent = text; b.lastChild.textContent = value ?? ""; b.onclick = fn; box.appendChild(b); };
+  const chips = (opts, cur, fn) => { const r = document.createElement("div"); r.className = "chips";
+    opts.forEach(([v, l]) => { const c = document.createElement("button"); c.className = "chip" + (v === cur ? " on" : ""); c.textContent = l; c.onclick = () => { fn(v); save(); applyLook(); settings(page); }; r.appendChild(c); });
+    box.appendChild(r); };
+
+  if (page === "main") {
+    title("settings");
+    item("home screen", "bland", () => toast("opens android default-home settings"));
+    item("clock", S.clock.style + " · " + S.clock.pos, () => settings("clock"));
+    item("text", FONTS[S.font][1] + " · " + SIZES.find(s => s[0] === S.size)[1], () => settings("text"));
+    item("home apps", `${Math.min(S.favs.length, S.max)} of ${S.max}`, () => settings("home"));
+    item("daily quote", S.showQuote ? "on" : "off", () => { S.showQuote = !S.showQuote; save(); settings(); });
+    item("notifications", null, () => settings("notifs"));
+    item("pauses & daily limits", S.limit ? `${S.limit} opens/day` : "no limit", () => settings("limits"));
+    item("notion second brain", S.notion.token ? "connected" : "not connected", () => settings("notion"));
+    item("make the whole phone grayscale", null, () => dialog("grayscale everything",
+      null, "a launcher can only style itself. to drain the color from every app: Settings → Accessibility → Color correction → Grayscale. Or Digital Wellbeing → Bedtime mode → Grayscale.",
+      [["close"], ["open accessibility", () => toast("opens android accessibility")]]));
+    item("reset this preview", null, () => { try { Object.keys(localStorage).filter(k => k.startsWith("bland2:")).forEach(k => localStorage.removeItem(k)); } catch {} location.reload(); });
+    note("swipe up for apps, down for notifications, left or right for the calendar. long-press the clock to come back here.");
+  }
+  if (page === "clock") {
+    back(); title("clock");
+    label("position"); chips([["top", "top"], ["middle", "middle"], ["bottom", "bottom"]], S.clock.pos, v => S.clock.pos = v);
+    label("alignment"); chips([["left", "left"], ["center", "center"], ["right", "right"]], S.clock.align, v => S.clock.align = v);
+    label("style"); chips([["thin", "thin"], ["bold", "bold"], ["serif", "serif"], ["mono", "mono"], ["words", "in words"]], S.clock.style, v => S.clock.style = v);
+    label("size"); chips([["small", "small"], ["medium", "medium"], ["large", "large"], ["huge", "huge"]], S.clock.size, v => S.clock.size = v);
+    note("tap the home bar to see your changes.");
+  }
+  if (page === "text") {
+    back(); title("text");
+    label("font"); chips(Object.entries(FONTS).map(([k, v]) => [k, v[1]]), S.font, v => S.font = v);
+    label("size"); chips(SIZES.map(([v, l]) => [v, l]), S.size, v => S.size = v);
+    label("home app alignment"); chips([["left", "left"], ["center", "center"], ["right", "right"]], S.favAlign, v => S.favAlign = v);
+    label("preview");
+    const p = document.createElement("div"); p.style.fontSize = `calc(28px * var(--s))`; p.textContent = "messages"; box.appendChild(p);
+  }
+  if (page === "home") {
+    back(); title("home apps");
+    label("how many fit"); chips([3, 4, 5, 6, 7, 8].map(n => [n, String(n)]), S.max, v => { S.max = v; });
+    label("tap to add or remove");
+    APPS.forEach(a => { const on = S.favs.includes(a), pos = S.favs.indexOf(a) + 1;
+      item(a.toLowerCase(), on ? `#${pos}` : "", () => {
+        if (!on && S.favs.length >= S.max) return toast(`home holds ${S.max} apps. less is more.`);
+        toggle(S.favs, a); save(); settings("home"); }); });
+    note("long-press an app on the home screen to move it up or down.");
+  }
+  if (page === "notifs") {
+    back(); title("notifications");
+    label("one-tap setups");
+    chips([["people", "people only"], ["work", "people + work"], ["all", "show everything"], ["none", "hold everything"]], null, v => {
+      const people = ["Messages", "Phone", "WhatsApp", "Calendar", "Clock"], work = ["Gmail", "Drive", "Notion"];
+      APPS.forEach(a => S.modes[a] = v === "all" ? "allow" : v === "none" ? "quiet"
+        : people.includes(a) || (v === "work" && work.includes(a)) ? "allow" : "quiet");
+      S.cleared = false; toast("notifications updated"); });
+    label("per app · tap to change");
+    APPS.forEach(a => item(a.toLowerCase(), MODE_LABEL[mode(a)], () => { S.modes[a] = cycle(["allow", "quiet", "block"], mode(a)); S.cleared = false; save(); settings("notifs"); }));
+    note("show: appears as normal. hold quietly: taken out of the status bar and kept in bland's list. block: dismissed right away. for full silence, also turn off the app's sound in android settings (one tap from the long-press menu).");
+  }
+  if (page === "limits") {
+    back(); title("pauses & limits");
+    label("pause before opening"); chips([[0, "off"], [5, "5s"], [10, "10s"], [20, "20s"], [30, "30s"]], S.delay, v => S.delay = v);
+    label("daily opens per paused app");
+    chips([[1, "1"], [2, "2"], [3, "3"], [5, "5"], [10, "10"], [0, "no limit"]], S.limit, v => {
+      const looser = S.limit > 0 && (v === 0 || v > S.limit);
+      if (looser) { S.pendingLimit = v; toast("looser limits start tomorrow"); } else { S.limit = v; S.pendingLimit = null; } });
+    if (S.pendingLimit != null) note(`changes to ${S.pendingLimit || "no limit"} tomorrow. stricter limits apply right away, looser ones wait a day so you can't talk yourself out of it.`);
+    label("paused apps · tap to change");
+    APPS.forEach(a => item(a.toLowerCase(), S.paused.includes(a) ? (isLocked(a) ? "locked today" : `${S.opens[a] || 0}/${S.limit || "∞"} today`) : "", () => { toggle(S.paused, a); save(); settings("limits"); }));
+  }
+  if (page === "notion") {
+    back(); title("notion");
+    item(S.notion.token ? "change connection" : "connect your second brain", S.notion.token ? S.notion.name.toLowerCase() : "", () => notionSetup(() => settings("notion")));
+    if (S.notion.token) item("disconnect", null, () => { S.notion = { token: "", db: "", name: "Inbox" }; save(); settings("notion"); });
+    note("notes from the + note button land in your inbox database as new pages. the first line becomes the title. sort them into projects, areas and resources later, like the PARA method.");
+    if (S.notes.length) { label("captured in this preview"); S.notes.slice(0, 8).forEach(n => note("· " + n.text.split("\n")[0])); }
+  }
+}
+
+/* ---------- wiring ---------- */
+press($("clock"), () => toast("opens your alarms"), () => settings());
+$("date").onclick = () => show("calendar");
+$("hint").onclick = () => show("drawer");
+$("noteBtn").onclick = () => show("note");
+$("homebar").onclick = () => show("home");
+$("n-clear").onclick = () => { S.cleared = true; save(); renderNotifs(); updateStatus(); };
+$("n-manage").onclick = () => settings("notifs");
+
+let sy = null, sx = 0;
+$("phone").addEventListener("pointerdown", e => { sy = e.clientY; sx = e.clientX; });
+$("phone").addEventListener("pointerup", e => {
+  if (sy == null) return; const dy = e.clientY - sy, dx = e.clientX - sx; sy = null;
+  if ($("overlay").children.length) return;
+  const vert = Math.abs(dy) > Math.abs(dx), dist = Math.max(Math.abs(dx), Math.abs(dy));
+  if (dist < 60) return;
+  if (current === "home") {
+    if (vert && dy < 0) show("drawer");
+    else if (vert && dy > 0) show("notifs");
+    else show("calendar");
+  } else if (current === "calendar") {
+    if (!vert) { calMonth += dx < 0 ? 1 : -1; renderCal(dx < 0 ? 1 : -1); } else show("home");
+  } else if (current === "notifs" && vert && dy < 0 && !e.target.closest(".n-list")) show("home");
+  else if (current === "notifs" && vert && dy < 0 && $("n-list").scrollTop + $("n-list").clientHeight >= $("n-list").scrollHeight - 2) show("home");
+  else if (current === "drawer" && !vert && !e.target.closest(".wheel")) show("home");
+  else if (current === "opened" && vert && dy < 0) show("home");
+});
+$("phone").addEventListener("touchmove", e => { if (!e.target.closest(".n-list,.s-scroll,.cal-events,.note-text")) e.preventDefault(); }, { passive: false });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { if ($("overlay").children.length) closeDialog(); else show("home"); }
+  if (current === "calendar" && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { const d = e.key === "ArrowRight" ? 1 : -1; calMonth += d; renderCal(d); }
+});
+
+applyLook(); renderHome(); updateStatus();
+</script>
