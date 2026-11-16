@@ -2,11 +2,22 @@
 
 A black-and-white Android home screen built to make your phone boring.
 
-- **Home:** a clock, the date, how many apps you've opened today, and up to 6 pinned apps as plain text. No icons, badges, widgets or wallpaper.
-- **App list:** swipe up (or tap `apps`). Start typing to search, and press enter to open the top match.
-- **Pause:** long-press an app and pick *pause before opening*. Opening it then shows a countdown (10s by default) and how many times you've opened it today. You can't skip it, and leaving the screen restarts it.
-- **Long-press any app** to pin it, unpin it, reorder it, hide it, open its app info, or uninstall it.
-- **Settings:** long-press the clock. You can set the pause length, how many apps fit on home, and whether hidden apps show. There's also a guide to making the whole phone grayscale.
+- **Home:** a clock, the date, how many apps you've opened today, and your chosen apps as plain text. At the bottom: `apps` and `+ note`.
+- **Gestures:** swipe up for the app list, down for notifications, left or right for the calendar.
+- **App list:** a looping wheel. The middle row is biggest and the list never ends. Type to search; enter opens the middle app.
+- **Pauses & daily limits:** mark an app with *pause & limit*. It shows a countdown before opening and locks for the rest of the day once you've used your opens (3 by default). Stricter limits apply right away; looser ones wait until tomorrow.
+- **Calendar:** black-and-white month view with your events (asks for calendar access). Swipe left or right to change month.
+- **Notifications:** each app is *show*, *hold quietly* (out of the status bar, kept in Bland's list) or *block*. One-tap setups like "people only". Needs notification access.
+- **Look:** pick the font (sans, serif, mono, condensed) and text size. The clock can sit top, middle or bottom, left/center/right, in thin, bold, serif, mono or words.
+- **+ note → Notion:** sends a quick note to your second-brain inbox database. First line becomes the page title. Notes that fail are kept and retried.
+- **Settings:** long-press the clock.
+
+### Connecting Notion
+1. Go to notion.so/profile/integrations, create an integration and copy its secret.
+2. Open your inbox database → ··· → Connections → add the integration.
+3. Copy the database link, then in Bland: settings → notion second brain → connect.
+
+The secret is stored only on your phone, inside Bland's private storage.
 
 ## Install
 1. Download the APK from the latest **build-apk** run in the GitHub Actions tab (artifact `bland-launcher-apk`).

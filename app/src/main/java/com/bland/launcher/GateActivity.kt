@@ -5,9 +5,13 @@ import android.content.ComponentName
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.widget.TextView
 
-/** A short, unskippable pause before opening an app the user marked as distracting. */
+/**
+ * Shown before a paused app opens: a short, unskippable countdown.
+ * If the app has used up today's opens it shows a lock instead, with no way through.
+ */
 class GateActivity : Activity() {
     companion object {
         const val EXTRA_KEY = "key"
@@ -19,6 +23,7 @@ class GateActivity : Activity() {
     private lateinit var openBtn: TextView
     private var remaining = 0
     private var ready = false
+    private var locked = false
     private var component: ComponentName? = null
 
     private val tick = object : Runnable {
@@ -42,19 +47,34 @@ class GateActivity : Activity() {
         component = intent.getStringExtra(EXTRA_KEY)?.let { ComponentName.unflattenFromString(it) }
         val cn = component ?: run { finish(); return }
         val label = intent.getStringExtra(EXTRA_LABEL) ?: cn.packageName
-
         timer = findViewById(R.id.timer)
         openBtn = findViewById(R.id.open)
         findViewById<TextView>(R.id.label).text = label.lowercase()
+        findViewById<TextView>(R.id.cancel).setOnClickListener { finish() }
 
+        val limit = Prefs.limit(this)
         val opened = Usage.count(this, cn.packageName)
-        findViewById<TextView>(R.id.count).text = when (opened) {
+        locked = Launcher.isLocked(this, cn.packageName)
+        val count = findViewById<TextView>(R.id.count)
+        val prompt = findViewById<TextView>(R.id.prompt)
+
+        if (locked) {
+            count.text = "you've used all $limit opens for today."
+            timer.text = "locked"
+            timer.textSize = 28f
+            prompt.text = "it unlocks at midnight.\ngo do something else."
+            openBtn.visibility = View.GONE
+            findViewById<TextView>(R.id.cancel).text = "ok"
+            return
+        }
+
+        count.text = if (limit > 0) {
+            "opened $opened of $limit times today" + if (limit - opened == 1) ". this is the last one." else ""
+        } else when (opened) {
             0 -> "not opened yet today"
             1 -> "opened once today"
             else -> "opened $opened times today"
         }
-
-        findViewById<TextView>(R.id.cancel).setOnClickListener { finish() }
         openBtn.setOnClickListener {
             if (ready) {
                 Launcher.launchNow(this, cn)
@@ -65,6 +85,7 @@ class GateActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (locked) return
         // Leaving and coming back restarts the pause.
         remaining = Prefs.delaySeconds(this)
         ready = false
