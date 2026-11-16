@@ -108,6 +108,8 @@ class HomeActivity : Activity() {
             else -> { root.addView(clockBox); root.addView(sp1); root.addView(favs); root.addView(sp2) }
         }
 
+        if (Prefs.showQuote(this)) root.addView(buildQuote())
+
         val bottom = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val apps = Ui.row(this, "apps", 15f, Ui.GRAY).apply {
             setPadding(0, Ui.dp(this@HomeActivity, 16), Ui.dp(this@HomeActivity, 24), Ui.dp(this@HomeActivity, 16))
@@ -142,6 +144,35 @@ class HomeActivity : Activity() {
             box.addView(tv)
         }
         return box
+    }
+
+    private fun buildQuote(): LinearLayout {
+        val (text, author) = Quotes.today()
+        val box = Ui.vbox(this).apply {
+            gravity = Ui.gravity(Prefs.appAlign(this@HomeActivity))
+            setPadding(0, Ui.dp(this@HomeActivity, 16), 0, 0)
+        }
+        box.addView(Ui.row(this, text, 15f, Ui.GRAY).apply {
+            isSingleLine = false; maxLines = 3; setPadding(0, 0, 0, 0)
+            gravity = Ui.gravity(Prefs.appAlign(this@HomeActivity))
+        })
+        box.addView(Ui.row(this, "— ${author.lowercase()}", 13f, Ui.DIM).apply { setPadding(0, Ui.dp(this@HomeActivity, 4), 0, 0) })
+        box.setOnClickListener {
+            Ui.dialog(this).setTitle("today's quote").setMessage("$text\n\n— $author")
+                .setNegativeButton("close", null)
+                .setPositiveButton("save to inbox") { _, _ ->
+                    val note = "\"$text\" — $author"
+                    if (!Notion.configured(this)) Notion.setupDialog(this) { saveQuote(note) } else saveQuote(note)
+                }.show()
+        }
+        return box
+    }
+
+    private fun saveQuote(note: String) {
+        Notion.send(this, note) { ok, message ->
+            if (!ok) Outbox.add(this, note)
+            Ui.toast(this, if (ok) message else "$message — kept on your phone, will retry")
+        }
     }
 
     private fun styleClock() {

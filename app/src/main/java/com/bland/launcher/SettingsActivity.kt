@@ -84,6 +84,7 @@ class SettingsActivity : Activity() {
         item("clock", "${Prefs.clockStyle(this)} · ${Prefs.clockPos(this)}") { go("clock") }
         item("text", "${Prefs.font(this)} · ${sizeName(Prefs.textScale(this))}") { go("text") }
         item("home apps", "${Prefs.favorites(this).size.coerceAtMost(Prefs.maxFavorites(this))} of ${Prefs.maxFavorites(this)}") { go("home") }
+        item("daily quote", if (Prefs.showQuote(this)) "on" else "off") { Prefs.setShowQuote(this, !Prefs.showQuote(this)); render() }
         item("notifications") { go("notifs") }
         val limit = Prefs.limit(this)
         item("pauses & daily limits", if (limit > 0) "$limit/day" else "no limit") { go("limits") }

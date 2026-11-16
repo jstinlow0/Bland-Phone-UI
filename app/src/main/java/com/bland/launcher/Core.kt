@@ -113,6 +113,9 @@ object Prefs {
     fun notifMode(c: Context, pkg: String) = p(c).getString("mode:$pkg", "allow")!!
     fun setNotifMode(c: Context, pkg: String, v: String) = p(c).edit().putString("mode:$pkg", v).apply()
 
+    fun showQuote(c: Context) = p(c).getBoolean("showQuote", true)
+    fun setShowQuote(c: Context, v: Boolean) = p(c).edit().putBoolean("showQuote", v).apply()
+
     // Notion
     fun notionToken(c: Context) = p(c).getString("notionToken", "")!!
     fun notionDb(c: Context) = p(c).getString("notionDb", "")!!

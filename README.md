@@ -10,6 +10,7 @@ A black-and-white Android home screen built to make your phone boring.
 - **Notifications:** each app is *show*, *hold quietly* (out of the status bar, kept in Bland's list) or *block*. One-tap setups like "people only". Needs notification access.
 - **Look:** pick the font (sans, serif, mono, condensed) and text size. The clock can sit top, middle or bottom, left/center/right, in thin, bold, serif, mono or words.
 - **+ note → Notion:** sends a quick note to your second-brain inbox database. First line becomes the page title. Notes that fail are kept and retried.
+- **Daily quote:** one secular quote a day on the home screen. Tap it to save it to your Notion inbox. Turn it off in settings.
 - **Settings:** long-press the clock.
 
 ### Connecting Notion
