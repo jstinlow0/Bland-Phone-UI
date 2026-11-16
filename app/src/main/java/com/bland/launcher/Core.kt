@@ -41,6 +41,9 @@ object Apps {
             .sortedBy { it.name }
     }
 
+    /** Apps plus browser bookmarks: everything that can be opened from home or the list. */
+    fun withBookmarks(c: Context) = (load(c) + Shortcuts.load(c)).sortedBy { it.name }
+
     fun label(c: Context, pkg: String): String = try {
         val pm = c.packageManager
         pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
@@ -114,8 +117,11 @@ object Prefs {
     fun setNotifMode(c: Context, pkg: String, v: String) = p(c).edit().putString("mode:$pkg", v).apply()
 
     // Widgets
-    fun widgets(c: Context): Set<String> = p(c).getStringSet("widgets", emptySet())!!.toSet()
-    fun toggleWidget(c: Context, id: String) = toggle(c, "widgets", id)
+    fun widgets(c: Context): Set<String> = p(c).getStringSet("widgets", setOf("search"))!!.toSet()
+    // Not toggle(): that would start from an empty set and drop the default search bar.
+    fun toggleWidget(c: Context, id: String) = widgets(c).let { on ->
+        p(c).edit().putStringSet("widgets", if (id in on) on - id else on + id).apply()
+    }
     fun todos(c: Context) = p(c).getString("todos", "")!!.split("\n").filter { it.isNotEmpty() }
     fun setTodos(c: Context, v: List<String>) = p(c).edit().putString("todos", v.joinToString("\n")).apply()
 
@@ -188,10 +194,12 @@ object Launcher {
     }
 
     fun launchNow(c: Context, cn: ComponentName): Boolean {
-        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setComponent(cn)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+        val bookmark = Shortcuts.idOf(cn)
         return try {
-            c.startActivity(intent); Usage.record(c, cn.packageName); true
+            if (bookmark != null) Shortcuts.start(c, cn, bookmark)
+            else c.startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setComponent(cn)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED))
+            Usage.record(c, cn.packageName); true
         } catch (e: Exception) {
             Toast.makeText(c, "can't open that app", Toast.LENGTH_SHORT).show(); false
         }
@@ -321,15 +329,23 @@ object AppOptions {
                 else Prefs.setFavorites(a, favs + app.key)
             }
         }
-        val paused = app.pkg in Prefs.distracting(a)
-        add(if (paused) "remove pause & limit" else "pause & limit this app") { Launcher.togglePause(a, app.pkg) }
-        add("notifications: ${Notif.label(Prefs.notifMode(a, app.pkg))}") { Notif.menu(a, app.pkg, onChange) }
+        val bookmark = Shortcuts.idOf(app.component)
+        // A bookmark's package is the browser, so pause, notifications, info and uninstall would act on the whole browser.
+        if (bookmark == null) {
+            val paused = app.pkg in Prefs.distracting(a)
+            add(if (paused) "remove pause & limit" else "pause & limit this app") { Launcher.togglePause(a, app.pkg) }
+            add("notifications: ${Notif.label(Prefs.notifMode(a, app.pkg))}") { Notif.menu(a, app.pkg, onChange) }
+        }
         val hidden = app.key in Prefs.hidden(a)
         add(if (hidden) "unhide" else "hide from list") { Prefs.toggleHidden(a, app.key) }
-        add("app info") {
-            Launcher.tryStart(a, Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${app.pkg}")))
+        if (bookmark == null) {
+            add("app info") {
+                Launcher.tryStart(a, Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${app.pkg}")))
+            }
+            add("uninstall") { Launcher.tryStart(a, Intent(Intent.ACTION_DELETE, Uri.parse("package:${app.pkg}"))) }
+        } else {
+            add("remove bookmark") { Shortcuts.remove(a, app.component, bookmark); Prefs.setFavorites(a, favs - app.key) }
         }
-        add("uninstall") { Launcher.tryStart(a, Intent(Intent.ACTION_DELETE, Uri.parse("package:${app.pkg}"))) }
 
         Ui.dialog(a).setTitle(app.name)
             .setItems(opts.map { it.first }.toTypedArray()) { _, which -> opts[which].second(); onChange() }

@@ -96,7 +96,7 @@ class DrawerActivity : Activity() {
     }
 
     private fun refresh(keepPlace: Boolean) {
-        all = Apps.load(this)
+        all = Apps.withBookmarks(this)
         filter(keepPlace)
     }
 

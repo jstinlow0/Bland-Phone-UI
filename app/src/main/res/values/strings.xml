@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Bland</string>
+    <string name="lock_service_description">Lets you double-tap Bland\'s home screen to lock your phone. Bland does not read anything on your screen.</string>
 </resources>

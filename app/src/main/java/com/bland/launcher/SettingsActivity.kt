@@ -93,7 +93,7 @@ class SettingsActivity : Activity() {
         item("notion second brain", if (Notion.configured(this)) "connected" else "not connected") { go("notion") }
         item("make the whole phone grayscale") { grayscaleHelp() }
         item("android settings") { Launcher.tryStart(this, Intent(Settings.ACTION_SETTINGS)) }
-        note("swipe up for apps, down for notifications, left or right for the calendar. long-press the clock to come back here.")
+        note("swipe up for apps, down for notifications, left or right for the calendar. double-tap an empty spot to lock. long-press the clock to come back here.")
     }
 
     private fun clockPage() {
@@ -121,7 +121,7 @@ class SettingsActivity : Activity() {
         label("how many fit"); chips((3..8).map { it to it.toString() }, Prefs.maxFavorites(this)) { Prefs.setMaxFavorites(this, it) }
         label("tap to add or remove")
         val favs = Prefs.favorites(this)
-        for (app in Apps.load(this)) {
+        for (app in Apps.withBookmarks(this)) {
             val pos = favs.indexOf(app.key)
             item(app.name, if (pos >= 0) "#${pos + 1}" else "") {
                 val cur = Prefs.favorites(this)

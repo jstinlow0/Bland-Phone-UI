@@ -1,7 +1,11 @@
 package com.bland.launcher
 
 import android.app.Activity
+import android.app.SearchManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.speech.RecognizerIntent
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -23,7 +27,7 @@ import kotlin.random.Random
 
 /** Small text-only blocks under the home apps. Turned on in settings → widgets. */
 object Widgets {
-    val ALL = listOf("weather" to "weather", "usage" to "app usage", "todo" to "to-do list", "coin" to "coin flip")
+    val ALL = listOf("search" to "search bar", "weather" to "weather", "usage" to "app usage", "todo" to "to-do list", "coin" to "coin flip")
     private const val DONE = "✓"
     private const val MAX_TODOS = 5
 
@@ -34,7 +38,8 @@ object Widgets {
             gravity = Ui.gravity(Prefs.appAlign(a))
             setPadding(0, Ui.dp(a, 20), 0, 0)
         }
-        for ((id, _) in ALL) if (id in on) box.addView(when (id) {
+        if ("search" in on) box.addView(search(a), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        for ((id, _) in ALL) if (id in on && id != "search") box.addView(when (id) {
             "weather" -> weather(a)
             "usage" -> usage(a)
             "todo" -> todo(a, refresh)
@@ -42,6 +47,37 @@ object Widgets {
         })
         return box
     }
+
+    /** A plain search pill: tap for Google search, lens for Google Lens, mic for your voice assistant (Gemini/Assistant). */
+    private fun search(a: Activity): View {
+        val bar = LinearLayout(a).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(Ui.dp(a, 12), 0, Ui.dp(a, 6), 0)
+            background = GradientDrawable().apply { cornerRadius = Ui.dpf(a, 24f); setStroke(Ui.dp(a, 1), Ui.DIM) }
+        }
+        fun part(text: String, color: Int, go: () -> Unit) = Ui.row(a, text, 16f, color).apply {
+            setPadding(Ui.dp(a, 10), Ui.dp(a, 12), Ui.dp(a, 10), Ui.dp(a, 12))
+            setOnClickListener { go() }
+        }
+        bar.addView(part("search", Ui.GRAY) {
+            if (!Launcher.tryStart(a, Intent("android.search.action.GLOBAL_SEARCH")) &&
+                !Launcher.tryStart(a, Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, ""))) Ui.toast(a, "no search app found")
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        bar.addView(part("lens", Ui.WHITE) {
+            val lensApp = a.packageManager.getLaunchIntentForPackage("com.google.ar.lens")
+            if (!Launcher.tryStart(a, Intent(Intent.ACTION_VIEW, Uri.parse("googleapp://lens")).setPackage(GOOGLE)) &&
+                (lensApp == null || !Launcher.tryStart(a, lensApp))) Ui.toast(a, "google lens needs the google app")
+        })
+        bar.addView(part("mic", Ui.WHITE) {
+            // Voice command first, so "add lunch with sam tomorrow at noon" goes to the assistant, not just a web search.
+            if (!Launcher.tryStart(a, Intent(Intent.ACTION_VOICE_COMMAND)) &&
+                !Launcher.tryStart(a, Intent(Intent.ACTION_ASSIST)) &&
+                !Launcher.tryStart(a, Intent(RecognizerIntent.ACTION_WEB_SEARCH))) Ui.toast(a, "no voice assistant found")
+        })
+        return bar
+    }
+
+    private const val GOOGLE = "com.google.android.googlequicksearchbox"
 
     private fun weather(a: Activity): View {
         val tv = Ui.row(a, Weather.cached(a) ?: "weather · tap to set your city", 16f, Ui.GRAY)

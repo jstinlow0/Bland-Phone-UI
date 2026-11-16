@@ -41,6 +41,8 @@ class HomeActivity : Activity() {
         setContentView(root)
 
         gestures = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDoubleTap(e: MotionEvent): Boolean { LockService.lock(this@HomeActivity); return true }
+
             override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
                 if (e1 == null) return false
                 val dy = e2.y - e1.y
@@ -130,7 +132,7 @@ class HomeActivity : Activity() {
 
     private fun buildFavorites(): LinearLayout {
         val box = Ui.vbox(this).apply { gravity = Ui.gravity(Prefs.appAlign(this@HomeActivity)) }
-        val apps = Apps.load(this).associateBy { it.key }
+        val apps = Apps.withBookmarks(this).associateBy { it.key }
         val pinned = Prefs.favorites(this).mapNotNull { apps[it] }.take(Prefs.maxFavorites(this))
         if (pinned.isEmpty()) {
             box.addView(Ui.row(this, "swipe up, then long-press an app\nto add it here", 16f, Ui.DIM).apply { isSingleLine = false })

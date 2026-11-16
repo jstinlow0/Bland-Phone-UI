@@ -15,6 +15,9 @@ import android.widget.LinearLayout
 class NoteActivity : Activity() {
     private lateinit var input: EditText
     private var sending = false
+    /** Set once the note is sent or cancelled, so leaving doesn't save it back as a draft. */
+    private var discard = false
+    private fun drafts() = getSharedPreferences("note", MODE_PRIVATE)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,10 +40,12 @@ class NoteActivity : Activity() {
             gravity = Gravity.TOP or Gravity.START
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
         }
+        input.setText(drafts().getString("draft", ""))
+        input.setSelection(input.text.length)
         root.addView(input, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
 
         val row = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-        row.addView(Ui.row(this, "cancel", 18f, Ui.GRAY).apply { setOnClickListener { finish() } })
+        row.addView(Ui.row(this, "cancel", 18f, Ui.GRAY).apply { setOnClickListener { clearDraft(); finish() } })
         row.addView(Ui.spacer(this))
         row.addView(Ui.row(this, "save to inbox", 18f).apply {
             setPadding(Ui.dp(this@NoteActivity, 20), Ui.dp(this@NoteActivity, 10), Ui.dp(this@NoteActivity, 20), Ui.dp(this@NoteActivity, 10))
@@ -52,6 +57,17 @@ class NoteActivity : Activity() {
         input.requestFocus()
     }
 
+    // Pressing home closes this screen, so keep what was typed for next time.
+    override fun onPause() {
+        super.onPause()
+        if (!discard) drafts().edit().putString("draft", input.text.toString()).apply()
+    }
+
+    private fun clearDraft() {
+        discard = true
+        drafts().edit().remove("draft").apply()
+    }
+
     private fun save() {
         val text = input.text.toString().trim()
         if (text.isEmpty()) { Ui.toast(this, "write something first"); return }
@@ -61,6 +77,7 @@ class NoteActivity : Activity() {
         Outbox.flush(this)
         Notion.send(this, text) { ok, message ->
             sending = false
+            clearDraft() // sent, or kept in the outbox for retry
             if (ok) {
                 Ui.toast(this, message)
             } else {
