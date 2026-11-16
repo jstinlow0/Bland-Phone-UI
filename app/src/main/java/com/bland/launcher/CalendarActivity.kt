@@ -120,7 +120,8 @@ class CalendarActivity : Activity() {
 
         val day = (first.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, -(get(Calendar.DAY_OF_WEEK) - 1)) }
         for (week in 0 until 6) {
-            if (week == 5 && day.get(Calendar.MONTH) != first.get(Calendar.MONTH)) break
+            // A month fits in 4-6 rows; stop once a row would be all next month.
+            if (week >= 4 && day.get(Calendar.MONTH) != first.get(Calendar.MONTH)) break
             val row = LinearLayout(this)
             for (i in 0 until 7) {
                 row.addView(cell(day.clone() as Calendar, first, now), LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f))

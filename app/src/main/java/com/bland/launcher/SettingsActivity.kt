@@ -189,7 +189,7 @@ class SettingsActivity : Activity() {
         for (a in Apps.load(this).distinctBy { it.pkg }) {
             val value = if (a.pkg !in paused) "" else if (Launcher.isLocked(this, a.pkg)) "locked today"
                 else "${Usage.count(this, a.pkg)}/${if (limit > 0) limit else "∞"} today"
-            item(a.name, value) { Prefs.toggleDistracting(this, a.pkg); render() }
+            item(a.name, value) { Launcher.togglePause(this, a.pkg); render() }
         }
     }
 

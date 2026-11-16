@@ -154,6 +154,12 @@ object Launcher {
         return pkg in Prefs.distracting(c) && limit > 0 && Usage.count(c, pkg) >= limit
     }
 
+    /** Removing a pause loosens the limit, so a locked app stays paused until tomorrow. */
+    fun togglePause(c: Context, pkg: String) {
+        if (isLocked(c, pkg)) Ui.toast(c, "locked for today. the pause can come off tomorrow.")
+        else Prefs.toggleDistracting(c, pkg)
+    }
+
     /** Opens an app, applying the pause and the daily limit. Returns false if it was held back. */
     fun open(a: Activity, app: AppEntry) = openComponent(a, app.component, app.label)
 
@@ -307,7 +313,7 @@ object AppOptions {
             }
         }
         val paused = app.pkg in Prefs.distracting(a)
-        add(if (paused) "remove pause & limit" else "pause & limit this app") { Prefs.toggleDistracting(a, app.pkg) }
+        add(if (paused) "remove pause & limit" else "pause & limit this app") { Launcher.togglePause(a, app.pkg) }
         add("notifications: ${Notif.label(Prefs.notifMode(a, app.pkg))}") { Notif.menu(a, app.pkg, onChange) }
         val hidden = app.key in Prefs.hidden(a)
         add(if (hidden) "unhide" else "hide from list") { Prefs.toggleHidden(a, app.key) }
