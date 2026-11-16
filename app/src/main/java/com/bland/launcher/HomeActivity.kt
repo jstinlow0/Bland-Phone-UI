@@ -68,12 +68,16 @@ class HomeActivity : Activity() {
         super.onResume()
         build()
         handler.post(ticker)
+        BlandNotificationService.onChange = { if (BlandNotificationService.unread(this) != shownUnread) build() }
     }
 
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(ticker)
+        BlandNotificationService.onChange = null
     }
+
+    private var shownUnread: Set<String> = emptySet()
 
     @Deprecated("Home screen ignores back.")
     override fun onBackPressed() { /* already home */ }
@@ -134,13 +138,14 @@ class HomeActivity : Activity() {
         val box = Ui.vbox(this).apply { gravity = Ui.gravity(Prefs.appAlign(this@HomeActivity)) }
         val apps = Apps.withBookmarks(this).associateBy { it.key }
         val pinned = Prefs.favorites(this).mapNotNull { apps[it] }.take(Prefs.maxFavorites(this))
+        shownUnread = BlandNotificationService.unread(this)
         if (pinned.isEmpty()) {
             box.addView(Ui.row(this, "swipe up, then long-press an app\nto add it here", 16f, Ui.DIM).apply { isSingleLine = false })
             return box
         }
         for (app in pinned) {
             val locked = Launcher.isLocked(this, app.pkg)
-            val tv = Ui.row(this, app.name, 28f, if (locked) Ui.DIM else Ui.WHITE)
+            val tv = Ui.row(this, BlandNotificationService.label(app, shownUnread), 28f, if (locked) Ui.DIM else Ui.WHITE)
             tv.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8))
             tv.setOnClickListener { Launcher.open(this, app) }
             tv.setOnLongClickListener { AppOptions.show(this, app) { build() }; true }

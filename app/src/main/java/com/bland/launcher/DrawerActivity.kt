@@ -113,6 +113,7 @@ class DrawerActivity : Activity() {
         adapter.loop = items.size > 6
         adapter.hidden = hidden
         adapter.paused = Prefs.distracting(this)
+        adapter.unread = BlandNotificationService.unread(this)
         adapter.notifyDataSetChanged()
 
         list.post {
@@ -178,6 +179,7 @@ class DrawerActivity : Activity() {
         var loop = true
         var hidden: Set<String> = emptySet()
         var paused: Set<String> = emptySet()
+        var unread: Set<String> = emptySet()
 
         override fun getCount() = if (items.isEmpty()) 0 else if (loop) LOOP else items.size
         override fun getItem(position: Int) = items[position % items.size]
@@ -190,7 +192,7 @@ class DrawerActivity : Activity() {
                 gravity = Gravity.CENTER_VERTICAL or Ui.gravity(Prefs.appAlign(this@DrawerActivity))
             }
             val app = getItem(position)
-            tv.text = app.name
+            tv.text = BlandNotificationService.label(app, unread)
             val locked = app.pkg in paused && Launcher.isLocked(this@DrawerActivity, app.pkg)
             tv.paintFlags = if (locked) tv.paintFlags or android.graphics.Paint.STRIKE_THRU_TEXT_FLAG
             else tv.paintFlags and android.graphics.Paint.STRIKE_THRU_TEXT_FLAG.inv()

@@ -92,6 +92,14 @@ class SettingsActivity : Activity() {
         item("pauses & daily limits", if (limit > 0) "$limit/day" else "no limit") { go("limits") }
         item("notion second brain", if (Notion.configured(this)) "connected" else "not connected") { go("notion") }
         item("make the whole phone grayscale") { grayscaleHelp() }
+        // The recents screen belongs to Samsung's own home app and shows the wallpaper behind it; black hides that.
+        item("black wallpaper", "for the recent apps screen") {
+            try {
+                val black = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLACK) }
+                android.app.WallpaperManager.getInstance(this).setBitmap(black, null, true, android.app.WallpaperManager.FLAG_SYSTEM)
+                Ui.toast(this, "wallpaper is black. your lock screen is unchanged.")
+            } catch (e: Exception) { Ui.toast(this, "couldn't change the wallpaper") }
+        }
         item("android settings") { Launcher.tryStart(this, Intent(Settings.ACTION_SETTINGS)) }
         note("swipe up for apps, down for notifications, left or right for the calendar. double-tap an empty spot to lock. long-press the clock to come back here.")
     }

@@ -65,14 +65,17 @@ object Widgets {
         }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         bar.addView(part("lens", Ui.WHITE) {
             val lensApp = a.packageManager.getLaunchIntentForPackage("com.google.ar.lens")
-            if (!Launcher.tryStart(a, Intent(Intent.ACTION_VIEW, Uri.parse("googleapp://lens")).setPackage(GOOGLE)) &&
+            // google://lens is what the Google app's own home screen bar opens.
+            if (!Launcher.tryStart(a, Intent(Intent.ACTION_VIEW, Uri.parse("google://lens")).setPackage(GOOGLE)
+                    .putExtra("LensHomescreenShortcut", true)) &&
                 (lensApp == null || !Launcher.tryStart(a, lensApp))) Ui.toast(a, "google lens needs the google app")
         })
         bar.addView(part("mic", Ui.WHITE) {
-            // Voice command first, so "add lunch with sam tomorrow at noon" goes to the assistant, not just a web search.
-            if (!Launcher.tryStart(a, Intent(Intent.ACTION_VOICE_COMMAND)) &&
-                !Launcher.tryStart(a, Intent(Intent.ACTION_ASSIST)) &&
-                !Launcher.tryStart(a, Intent(RecognizerIntent.ACTION_WEB_SEARCH))) Ui.toast(a, "no voice assistant found")
+            // showAssist opens your default assistant (Gemini) like holding the side key, so commands get done.
+            // The plain voice-command intent goes to Bixby on Samsung, which is why the old version did nothing.
+            if (!a.showAssist(null) &&
+                !Launcher.tryStart(a, Intent(Intent.ACTION_VOICE_COMMAND).setPackage(GOOGLE)) &&
+                !Launcher.tryStart(a, Intent(RecognizerIntent.ACTION_WEB_SEARCH).setPackage(GOOGLE))) Ui.toast(a, "no voice assistant found")
         })
         return bar
     }

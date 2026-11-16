@@ -18,6 +18,17 @@ data class Held(val key: String, val pkg: String, val title: String, val text: S
 class BlandNotificationService : NotificationListenerService() {
     companion object {
         @Volatile var instance: BlandNotificationService? = null
+        /** Home or the app list redraws through this when an app's notifications come or go. */
+        var onChange: (() -> Unit)? = null
+
+        /** Apps with a notification still in the status bar, for the white dot. */
+        fun unread(c: Context): Set<String> = try {
+            instance?.activeNotifications?.filter { relevant(c, it) }?.map { it.packageName }?.toSet() ?: emptySet()
+        } catch (e: Exception) { emptySet() }
+
+        /** App name with a dot when it has unread notifications. Bookmarks skip it: their package is the browser's. */
+        fun label(app: AppEntry, unread: Set<String>) =
+            if (app.pkg in unread && Shortcuts.idOf(app.component) == null) "${app.name} •" else app.name
         /** Tap targets for held notifications. Kept in memory only; they can't be saved. */
         val intents = HashMap<String, PendingIntent>()
 
@@ -52,10 +63,13 @@ class BlandNotificationService : NotificationListenerService() {
                 (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY) == 0
     }
 
-    override fun onListenerConnected() { instance = this; sweep() }
+    override fun onListenerConnected() { instance = this; sweep(); changed() }
     override fun onListenerDisconnected() { instance = null }
 
-    override fun onNotificationPosted(sbn: StatusBarNotification) = handle(sbn)
+    override fun onNotificationPosted(sbn: StatusBarNotification) { handle(sbn); changed() }
+    override fun onNotificationRemoved(sbn: StatusBarNotification) = changed()
+
+    private fun changed() { android.os.Handler(mainLooper).post { onChange?.invoke() } }
 
     /** Apply the rules to anything already showing, e.g. after a setting changes. */
     fun sweep() {
