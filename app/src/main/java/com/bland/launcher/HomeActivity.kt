@@ -108,6 +108,7 @@ class HomeActivity : Activity() {
             else -> { root.addView(clockBox); root.addView(sp1); root.addView(favs); root.addView(sp2) }
         }
 
+        Widgets.build(this) { build() }?.let { root.addView(it) }
         if (Prefs.showQuote(this)) root.addView(buildQuote())
 
         val bottom = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }

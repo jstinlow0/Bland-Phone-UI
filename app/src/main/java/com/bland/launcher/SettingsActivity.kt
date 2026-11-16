@@ -51,6 +51,7 @@ class SettingsActivity : Activity() {
             "notifs" -> notifPage()
             "limits" -> limitsPage()
             "notion" -> notionPage()
+            "widgets" -> widgetsPage()
             else -> mainPage()
         }
     }
@@ -84,6 +85,7 @@ class SettingsActivity : Activity() {
         item("clock", "${Prefs.clockStyle(this)} · ${Prefs.clockPos(this)}") { go("clock") }
         item("text", "${Prefs.font(this)} · ${sizeName(Prefs.textScale(this))}") { go("text") }
         item("home apps", "${Prefs.favorites(this).size.coerceAtMost(Prefs.maxFavorites(this))} of ${Prefs.maxFavorites(this)}") { go("home") }
+        item("widgets", "${Prefs.widgets(this).size} on") { go("widgets") }
         item("daily quote", if (Prefs.showQuote(this)) "on" else "off") { Prefs.setShowQuote(this, !Prefs.showQuote(this)); render() }
         item("notifications") { go("notifs") }
         val limit = Prefs.limit(this)
@@ -191,6 +193,16 @@ class SettingsActivity : Activity() {
                 else "${Usage.count(this, a.pkg)}/${if (limit > 0) limit else "∞"} today"
             item(a.name, value) { Launcher.togglePause(this, a.pkg); render() }
         }
+    }
+
+    private fun widgetsPage() {
+        back(); title("widgets")
+        label("on the home screen · tap to change")
+        val on = Prefs.widgets(this)
+        for ((id, name) in Widgets.ALL) item(name, if (id in on) "on" else "off") { Prefs.toggleWidget(this, id); render() }
+        if ("weather" in on) item("weather city", Weather.city(this) ?: "not set") { Weather.cityDialog(this) { render() } }
+        note("weather comes from open-meteo.com and only sends the city you type. app usage counts apps opened from bland today. " +
+            "to-do: tap to tick off, long-press to delete.")
     }
 
     private fun notionPage() {

@@ -11,6 +11,7 @@ A black-and-white Android home screen built to make your phone boring.
 - **Look:** pick the font (sans, serif, mono, condensed) and text size. The clock can sit top, middle or bottom, left/center/right, in thin, bold, serif, mono or words.
 - **+ note → Notion:** sends a quick note to your second-brain inbox database. First line becomes the page title. Notes that fail are kept and retried.
 - **Daily quote:** one secular quote a day on the home screen. Tap it to save it to your Notion inbox. Turn it off in settings.
+- **Widgets:** turn on in settings → widgets. Weather (type a city; data from open-meteo.com, no account), today's most-opened apps, a to-do list of up to five (tap to tick, long-press to delete) and a coin you tap to flip.
 - **Settings:** long-press the clock.
 
 ### Connecting Notion

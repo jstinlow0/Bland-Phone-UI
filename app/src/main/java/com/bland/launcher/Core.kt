@@ -113,7 +113,13 @@ object Prefs {
     fun notifMode(c: Context, pkg: String) = p(c).getString("mode:$pkg", "allow")!!
     fun setNotifMode(c: Context, pkg: String, v: String) = p(c).edit().putString("mode:$pkg", v).apply()
 
-    fun showQuote(c: Context) = p(c).getBoolean("showQuote", true)
+    // Widgets
+    fun widgets(c: Context): Set<String> = p(c).getStringSet("widgets", emptySet())!!.toSet()
+    fun toggleWidget(c: Context, id: String) = toggle(c, "widgets", id)
+    fun todos(c: Context) = p(c).getString("todos", "")!!.split("\n").filter { it.isNotEmpty() }
+    fun setTodos(c: Context, v: List<String>) = p(c).edit().putString("todos", v.joinToString("\n")).apply()
+
+    fun showQuote(c: Context) =p(c).getBoolean("showQuote", true)
     fun setShowQuote(c: Context, v: Boolean) = p(c).edit().putBoolean("showQuote", v).apply()
 
     // Notion
@@ -144,6 +150,9 @@ object Usage {
 
     fun count(c: Context, pkg: String) = p(c).getInt("app:$pkg", 0)
     fun total(c: Context) = p(c).getInt("total", 0)
+    fun top(c: Context, n: Int): List<Pair<String, Int>> = p(c).all
+        .mapNotNull { (k, v) -> if (k.startsWith("app:") && v is Int) k.removePrefix("app:") to v else null }
+        .sortedByDescending { it.second }.take(n)
     fun recordBlocked(c: Context) { val sp = p(c); sp.edit().putInt("blocked", sp.getInt("blocked", 0) + 1).apply() }
     fun blocked(c: Context) = p(c).getInt("blocked", 0)
 }
