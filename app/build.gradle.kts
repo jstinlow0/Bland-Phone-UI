@@ -15,6 +15,20 @@ android {
         versionName = "1.0"
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // CI writes the fixed key from repo secrets here; local builds keep the usual debug key.
+            val key = file("bland.p12")
+            if (key.exists()) {
+                storeFile = key
+                storeType = "pkcs12"
+                storePassword = System.getenv("SIGNING_PASSWORD")
+                keyAlias = "bland"
+                keyPassword = System.getenv("SIGNING_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

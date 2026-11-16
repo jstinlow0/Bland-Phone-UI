@@ -15,7 +15,16 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+      # Same key every build, so a new APK installs over the old one and keeps your settings.
+      - name: Signing key
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          if [ -n "$SIGNING_KEY" ]; then echo "$SIGNING_KEY" | base64 -d > app/bland.p12
+          else echo "::warning::SIGNING_KEY secret is missing, so this APK can't update an installed Bland."; fi
       - name: Build APK
+        env:
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: ./gradlew assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
